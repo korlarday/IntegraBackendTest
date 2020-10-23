@@ -15,6 +15,8 @@ namespace IntegraAdmin.Core.Models
         [StringLength(255)]
         public string ProductName { get; set; }
 
+        public string Description { get; set; }
+
         public ICollection<CustomerProduct> Customers { get; set; }
         public Product()
         {

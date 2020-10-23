@@ -154,5 +154,14 @@ namespace IntegraAdmin.Controllers
             var model = new SponsorsViewModel { SponsorUsers = result };
             return Ok(result);
         }
+    
+        [Authorize(Roles = "Admin")]
+        [HttpGet("all-users")]
+        public async Task<IActionResult> AllUsers()
+        {
+            var users = await _userManager.Users.ToListAsync();
+            var result = _mapper.Map<List<ApplicationUser>, List<ReadUserResource>>(users);
+            return Ok(result);
+        }
     }
 }

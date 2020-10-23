@@ -23,7 +23,7 @@ namespace IntegraAdmin.Persistence
 
         public async Task<List<Product>> AllProducts()
         {
-            return await _context.Products.ToListAsync();
+            return await _context.Products.Include(x => x.Customers).ToListAsync();
         }
 
         public async Task<Product> GetProduct(int id)

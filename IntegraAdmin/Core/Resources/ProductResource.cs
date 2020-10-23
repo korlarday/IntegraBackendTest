@@ -13,5 +13,8 @@ namespace IntegraAdmin.Core.Resources
         [Required]
         [StringLength(255)]
         public string ProductName { get; set; }
+
+        public string Description { get; set; }
+
     }
 }

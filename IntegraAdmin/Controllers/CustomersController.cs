@@ -6,12 +6,14 @@ using AutoMapper;
 using IntegraAdmin.Core.Interfaces;
 using IntegraAdmin.Core.Models;
 using IntegraAdmin.Core.Resources;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace IntegraAdmin.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize(Roles = "Admin")]
     [ApiController]
     public class CustomersController : ControllerBase
     {
