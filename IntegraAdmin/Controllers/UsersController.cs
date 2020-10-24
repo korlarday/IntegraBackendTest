@@ -17,6 +17,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -37,14 +38,18 @@ namespace IntegraAdmin.Controllers
             SignInManager<ApplicationUser> signInManager, 
             IOptions<ApplicationSettings> appSettings,
             ISponsorRepository sponsorRepository,
-            IMapper mapper)
+            IMapper mapper,
+            IConfiguration configuration)
         {
             _userManager = userManager;
             _signInManager = signInManager;
             _sponsorRepo = sponsorRepository;
             _mapper = mapper;
             _appSettings = appSettings.Value;
+            Configuration = configuration;
         }
+
+        public IConfiguration Configuration { get; }
 
         [HttpPost]
         [Route("register")]
@@ -94,21 +99,62 @@ namespace IntegraAdmin.Controllers
                     customClaims.Add(newClaim);
                 }
 
-                var claimIdentity = new ClaimsIdentity(customClaims);
-                claimIdentity.AddClaim(new Claim("UserId", user.Id.ToString()));
-                    var tokenDescriptor = new SecurityTokenDescriptor
-                    {
-                        Subject = claimIdentity,
-                        Expires = DateTime.UtcNow.AddDays(1),
-                        SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_appSettings.JWT_Secret)), SecurityAlgorithms.HmacSha256Signature)
-                    };
-                    var tokenHandler = new JwtSecurityTokenHandler();
-                    var securityToken = tokenHandler.CreateToken(tokenDescriptor);
-                    var token = tokenHandler.WriteToken(securityToken);
-                    return Ok(new { token });
+                //var claimIdentity = new ClaimsIdentity(customClaims);
+                customClaims.Add(new Claim("UserId", user.Id.ToString()));
+                
+
+                var secretBytes = Encoding.UTF8.GetBytes(Configuration["ApplicationSettings:Secret"]);
+                var key = new SymmetricSecurityKey(secretBytes);
+                var algorithm = SecurityAlgorithms.HmacSha256;
+
+                var signingCredentials = new SigningCredentials(key, algorithm);
+
+                var token = new JwtSecurityToken(
+                    Configuration["ApplicationSettings:Issuer"],
+                    Configuration["ApplicationSettings:Audiance"],
+                    customClaims,
+                    notBefore: DateTime.Now,
+                    expires: DateTime.Now.AddHours(1),
+                    signingCredentials);
+
+                var tokenJson = new JwtSecurityTokenHandler().WriteToken(token);
+
+                return Ok(new { token = tokenJson });
             }
             else
                 return BadRequest(new { message = "Username or password is incorrect." });
+            
+            //var user = await _userManager.FindByNameAsync(model.UserName);
+
+            //if (user != null && await _userManager.CheckPasswordAsync(user, model.Password))
+            //{
+            //    //Get role assigned to the user
+            //    var roles = await _userManager.GetRolesAsync(user);
+            //    IdentityOptions _options = new IdentityOptions();
+
+            //    // add roles to claim
+            //    var customClaims = new List<Claim>();
+            //    foreach (var role in roles)
+            //    {
+            //        var newClaim = new Claim(_options.ClaimsIdentity.RoleClaimType, role);
+            //        customClaims.Add(newClaim);
+            //    }
+
+            //    var claimIdentity = new ClaimsIdentity(customClaims);
+            //    claimIdentity.AddClaim(new Claim("UserId", user.Id.ToString()));
+            //        var tokenDescriptor = new SecurityTokenDescriptor
+            //        {
+            //            Subject = claimIdentity,
+            //            Expires = DateTime.UtcNow.AddDays(1),
+            //            SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_appSettings.JWT_Secret)), SecurityAlgorithms.HmacSha256Signature)
+            //        };
+            //        var tokenHandler = new JwtSecurityTokenHandler();
+            //        var securityToken = tokenHandler.CreateToken(tokenDescriptor);
+            //        var token = tokenHandler.WriteToken(securityToken);
+            //        return Ok(new { token });
+            //}
+            //else
+            //    return BadRequest(new { message = "Username or password is incorrect." });
         }
 
 

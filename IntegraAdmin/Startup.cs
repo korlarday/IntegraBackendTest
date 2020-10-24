@@ -21,11 +21,16 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Owin.Security.OAuth;
 
 namespace IntegraAdmin
 {
     public class Startup
     {
+        public static OAuthAuthorizationServerOptions OAuthOptions { get; private set; }
+
+        public static string PublicClientId { get; private set; }
+
         public Startup(IConfiguration configuration)
         {
             Configuration = configuration;
@@ -45,6 +50,7 @@ namespace IntegraAdmin
             services.AddScoped<ISponsorRepository, SponsorRepository>();
             services.AddScoped<ICustomerRepository, CustomerRepository>();
             services.AddScoped<ISponsorCustomersRepository, SponsorCustomersRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
 
             services.AddDbContext<ApplicationDbContext>(options => options
                         .UseSqlServer(Configuration.GetConnectionString("DefaultConnection")));
@@ -64,16 +70,46 @@ namespace IntegraAdmin
 
             services.AddCors();
 
-            //Jwt Authentication
+            // Oauth
+            //services.AddAuthentication("OAuth")
+            //    .AddJwtBearer("OAuth", config =>
+            //    {
+            //        var secretBytes = Encoding.UTF8.GetBytes(Configuration["ApplicationSettings:Secret"]);
+            //        var key = new SymmetricSecurityKey(secretBytes);
 
-            var key = Encoding.UTF8.GetBytes(Configuration["ApplicationSettings:JWT_Secret"].ToString());
+            //        config.Events = new JwtBearerEvents()
+            //        {
+            //            OnMessageReceived = context =>
+            //            {
+            //                if (context.Request.Query.ContainsKey("access_token"))
+            //                {
+            //                    context.Token = context.Request.Query["access_token"];
+            //                }
+
+            //                return Task.CompletedTask;
+            //            }
+            //        };
+
+            //        config.TokenValidationParameters = new TokenValidationParameters()
+            //        {
+            //            ClockSkew = TimeSpan.Zero,
+            //            ValidIssuer = Configuration["ApplicationSettings:Issuer"],
+            //            ValidAudience = Configuration["ApplicationSettings:Audiance"],
+            //            IssuerSigningKey = key,
+            //        };
+            //    });
+
+
+            //Jwt Authentication
+            var key = Encoding.UTF8.GetBytes(Configuration["ApplicationSettings:Secret"].ToString());
 
             services.AddAuthentication(x =>
             {
                 x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
                 x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 x.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-            }).AddJwtBearer(x => {
+            }).AddJwtBearer(x =>
+            {
                 x.RequireHttpsMetadata = false;
                 x.SaveToken = false;
                 x.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
@@ -85,6 +121,28 @@ namespace IntegraAdmin
                     ClockSkew = TimeSpan.Zero
                 };
             });
+
+            //var key = Encoding.UTF8.GetBytes(Configuration["ApplicationSettings:JWT_Secret"].ToString());
+
+            //services.AddAuthentication(x =>
+            //{
+            //    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            //    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            //    x.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+            //}).AddJwtBearer(x => {
+            //    x.RequireHttpsMetadata = false;
+            //    x.SaveToken = false;
+            //    x.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+            //    {
+            //        ValidateIssuerSigningKey = true,
+            //        IssuerSigningKey = new SymmetricSecurityKey(key),
+            //        ValidateIssuer = false,
+            //        ValidateAudience = false,
+            //        ClockSkew = TimeSpan.Zero
+            //    };
+            //});
+
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -105,6 +163,8 @@ namespace IntegraAdmin
                     });
                 });
             }
+
+
 
             app.UseCors(builder =>
                 builder.WithOrigins(Configuration["ApplicationSettings:Client_URL"].ToString())
